@@ -1,0 +1,22 @@
+# CI image for services/build's GitLab pipeline (a separate project
+# from services/deploy, built by the same GitHub repo/workflow as
+# Dockerfile alongside it - same submodule-repo pattern, different
+# tooling because it's a different job's needs).
+#
+# Bakes in git + openssh-client so services/build's build-and-push job
+# doesn't need `apk add` on every run to clone its private projects/
+# submodules over SSH - docker:27 alone has neither. docker itself is
+# already in the base image; this only adds what's missing on top of
+# it.
+#
+# Built by .github/workflows/build.yml and published to
+# ghcr.io/j551n-ncloud/build-ci-image. A separate package from
+# deploy-ci-image on purpose - different content, different purpose,
+# shouldn't look like two versions of the same thing.
+FROM docker:27
+
+RUN apk add --no-cache git openssh-client
+
+RUN docker --version \
+    && git --version \
+    && ssh -V

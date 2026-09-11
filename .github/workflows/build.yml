@@ -3,11 +3,11 @@ name: Build and publish
 on:
   push:
     branches: [main]
-    paths: [Dockerfile]
+    paths: [Dockerfile, Dockerfile.build]
   workflow_dispatch: {}
 
 jobs:
-  build:
+  build-deploy-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -26,6 +26,7 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          file: Dockerfile
           push: true
           # amd64 is what actually matters - the GitLab runner (n-serv003)
           # is amd64 - but building both means this also pulls locally on
@@ -34,5 +35,37 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository }}:latest
             ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-build-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.build
+          push: true
+          # n-build-runner (services/build's runner) is amd64 only -
+          # arm64 isn't needed here the way it is for deploy-ci-image,
+          # but building it costs little and keeps this workflow's two
+          # jobs consistent with each other.
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/j551n-ncloud/build-ci-image:latest
+            ghcr.io/j551n-ncloud/build-ci-image:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
