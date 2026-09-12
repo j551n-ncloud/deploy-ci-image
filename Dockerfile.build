@@ -9,14 +9,22 @@
 # already in the base image; this only adds what's missing on top of
 # it.
 #
+# python3 + py3-requests are for the scheduled cve-scan job, which reads
+# Harbor's Trivy results and opens GitLab issues
+# (services/build scripts/check_image_cves.py). py3-requests from apk
+# rather than pip: this is musl, and pip would either build a wheel or
+# need --break-system-packages on a PEP 668 image.
+#
 # Built by .github/workflows/build.yml and published to
 # ghcr.io/j551n-ncloud/build-ci-image. A separate package from
 # deploy-ci-image on purpose - different content, different purpose,
 # shouldn't look like two versions of the same thing.
 FROM docker:27
 
-RUN apk add --no-cache git openssh-client
+RUN apk add --no-cache git openssh-client python3 py3-requests
 
 RUN docker --version \
     && git --version \
-    && ssh -V
+    && ssh -V \
+    && python3 --version \
+    && python3 -c 'import requests; print("requests", requests.__version__)'
