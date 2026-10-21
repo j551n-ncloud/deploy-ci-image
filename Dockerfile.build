@@ -15,16 +15,22 @@
 # rather than pip: this is musl, and pip would either build a wheel or
 # need --break-system-packages on a PEP 668 image.
 #
+# py3-yaml is for services/build's own `test` job (python3 -m unittest
+# over its scripts, which parse compose files), so it runs here instead
+# of `apk add`ing on alpine/git every time - one stalled mirror fetch
+# there once held the whole pipeline for 16 minutes.
+#
 # Built by .github/workflows/build.yml and published to
 # ghcr.io/j551n-ncloud/build-ci-image. A separate package from
 # deploy-ci-image on purpose - different content, different purpose,
 # shouldn't look like two versions of the same thing.
 FROM docker:27
 
-RUN apk add --no-cache git openssh-client python3 py3-requests
+RUN apk add --no-cache git openssh-client python3 py3-requests py3-yaml
 
 RUN docker --version \
     && git --version \
     && ssh -V \
     && python3 --version \
-    && python3 -c 'import requests; print("requests", requests.__version__)'
+    && python3 -c 'import requests; print("requests", requests.__version__)' \
+    && python3 -c 'import yaml; print("yaml", yaml.__version__)'
